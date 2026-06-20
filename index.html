@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเบิกจ่ายมิเตอร์ IoT นอกเวลา</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary: #4a90e2;
+            --primary-hover: #357abd;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --text-main: #333333;
+            --text-sub: #7f8c8d;
+            --border-radius: 20px;
+        }
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0; padding: 0;
+            min-height: 100vh;
+        }
+        
+        /* สไตล์ Navbar */
+        .navbar {
+            background: var(--card-bg);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-brand {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            margin: 0; padding: 0;
+            gap: 10px;
+        }
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-sub);
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #f0f7ff;
+            color: var(--primary);
+        }
+
+        /* จัด Layout หน้าหลัก */
+        .main-container {
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+            width: 100%; max-width: 500px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        .card-wide {
+            max-width: 750px;
+        }
+        h2 { margin-top: 0; font-weight: 600; color: #2c3e50; font-size: 24px; text-align: center; }
+        .subtitle { color: var(--text-sub); font-size: 14px; margin-bottom: 25px; text-align: center; }
+        
+        .input-group { text-align: left; margin-bottom: 18px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #5c6b73; }
+        input {
+            width: 100%; padding: 12px 16px;
+            border: 1px solid #e2e8f0; border-radius: 12px;
+            font-size: 15px; font-family: inherit; box-sizing: border-box;
+            background-color: #fcfdfe; transition: all 0.2s;
+        }
+        input:focus { outline: none; border-color: var(--primary); background-color: #fff; }
+        
+        .btn {
+            width: 100%; padding: 14px; background-color: var(--primary);
+            color: white; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: background 0.2s; margin-top: 10px;
+        }
+        .btn:hover { background-color: var(--primary-hover); }
+        .hidden { display: none !important; }
+        
+        /* สไตล์ของ Grid เลือกมิเตอร์ 8 ตัว */
+        .meter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        @media (max-width: 600px) {
+            .meter-grid { grid-template-columns: repeat(2, 1fr); }
+            .navbar { flex-direction: column; gap: 15px; }
+        }
+        .meter-box {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .meter-box:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            background: #f0f7ff;
+        }
+        .meter-box.selected {
+            border-color: var(--success);
+            background: #ebfbf2;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.15);
+        }
+        .meter-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .meter-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4325c9;
+        }
+        
+        /* สไตล์ตารางหน้าระบบประวัติ */
+        .table-responsive { overflow-x: auto; margin-top: 15px; }
+        .custom-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        .custom-table th, .custom-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        .custom-table th { background: #f8fafc; color: #475569; font-weight: 600; }
+        
+        /* สไตล์หน้า Stock */
+        .stock-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stock-card { background: #f8fafc; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;}
+        .stock-num { font-size: 24px; font-weight: bold; color: var(--primary); }
+
+        #status, #form-status { margin-top: 15px; font-size: 14px; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <nav id="main-nav" class="navbar hidden">
+        <div class="nav-brand"><i class="fa-solid fa-bolt" style="color: rgb(74, 172, 54);"></i> เครื่องสำรองมิเตอร์นอกเวลาอัจฉริยะ</div>
+        <ul class="nav-menu">
+            <li><a id="menu-checkout" class="nav-link active" onclick="switchPage('checkout')"><i class="fa-solid fa-box-open"></i> เบิกมิเตอร์</a></li>
+            <li><a id="menu-history" class="nav-link" onclick="switchPage('history')"><i class="fa-solid fa-history"></i> ประวัติ</a></li>
+            <li><a id="menu-stock" class="nav-link" onclick="switchPage('stock')"><i class="fa-solid fa-warehouse"></i> Stock</a></li>
+            <li><a id="menu-control" class="nav-link" onclick="switchPage('control')"><i class="fa-solid fa-sliders"></i> Control</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-container">
+        <div id="login-page" class="card" style="text-align: center;">
+            <div class="logo-wrapper" style="margin-bottom: 20px;">
+                <img src="https://www.appsheet.com:443/fsimage.png?appid=a8291bf0-c55b-4abe-9021-2cec28bfd558&datasource=google&filename=DocId%3D13vdYupKUJiEPo7s0HUmIEqmfEGZv13Rn&signature=6b72c1db00a374e8cf34da5f749e7723a44357ee38ecbe47d9005b50617581cb&tableprovider=google&userid=1872895" alt="Logo" style="max-width: 100px; height: auto; display: block; margin: 0 auto; object-fit: contain;">
+            </div>
+            <h2>Automatic Meter Station</h2>
+            <div class="subtitle">กรุณากรอกรหัสพนักงาน</div>
+            <div class="input-group">
+                <label for="emp-id">รหัสพนักงาน</label>
+                <input type="text" id="emp-id" placeholder="XXXXXX">
+            </div>
+            <button class="btn" onclick="login()">ตรวจสอบรหัสพนักงาน</button>
+            <div id="status" style="color: var(--primary);"></div>
+        </div>
+
+        <div id="main-page" class="card card-wide hidden">
+            
+            <div id="content-checkout" class="page-content">
+                <h2>Automatic Meter Station</h2>
+                <div class="subtitle">ผู้ใช้งาน: <span id="user-display" style="color:var(--primary); font-weight:600;"></span></div>
+                
+                <div style="text-align: center;">
+                    <label style="display: inline-block; font-size: 17px; color: #1774ee; font-weight: bold; background-color: #b8f5d4; padding: 10px 20px; border-radius: 8px; margin-bottom: 16px;">เลือกมิเตอร์ที่ต้องการเบิก</label>
+                </div>
+                
+                <div class="meter-grid">
+                    <div class="meter-box" id="meter-1" onclick="selectMeter(1)">
+                        <span class="meter-icon">🔦</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 1</span>
+                    </div>
+                    <div class="meter-box" id="meter-2" onclick="selectMeter(2)">
+                        <span class="meter-icon">📟</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 2</span>
+                    </div>
+                    <div class="meter-box" id="meter-3" onclick="selectMeter(3)">
+                        <span class="meter-icon">📟</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 3</span>
+                    </div>
+                    <div class="meter-box" id="meter-4" onclick="selectMeter(4)">
+                        <span class="meter-icon">📟</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 4</span>
+                    </div>
+                    <div class="meter-box" id="meter-5" onclick="selectMeter(5)">
+                        <span class="meter-icon">📟</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 5</span>
+                    </div>
+                    <div class="meter-box" id="meter-6" onclick="selectMeter(6)">
+                        <span class="meter-icon">📟</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 6</span>
+                    </div>
+                    <div class="meter-box" id="meter-7" onclick="selectMeter(7)">
+                        <span class="meter-icon">📟</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 7</span>
+                    </div>
+                    <div class="meter-box" id="meter-8" onclick="selectMeter(8)">
+                        <span class="meter-icon">📟</span>
+                        <span class="meter-name">มิเตอร์ตัวที่ 8</span>
+                    </div>
+                </div>
+
+                <div id="form-section" class="hidden" style="border-top: 1px solid #1762c5; padding-top: 25px; text-align: center;">
+                    <div style="display: inline-block; margin-bottom: 20px; font-size: 16px; color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px 20px; border-radius: 8px; font-weight: 500;">
+                        กรอกข้อมูลเพื่อปลดล็อก <span id="selected-meter-text" style="font-weight: bold; color: #0b2e13;"></span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="user-num" style="color: #1a73e8; font-weight: bold;">หมายเลขผู้ใช้ไฟ</label>
+                        <input type="text" id="user-num" placeholder="CA">
+                    </div>
+                    <div class="input-group">
+                        <label for="user-name" style="color: #1a73e8; font-weight: bold;">ชื่อผู้ใช้ไฟ</label>
+                        <input type="text" id="user-name" placeholder="ชื่อ - นามสกุล">
+                    </div>
+                    <div class="input-group">
+                        <label for="address" style="color: #1a73e8; font-weight: bold;">ที่อยู่ติดตั้ง</label>
+                        <input type="text" id="address" placeholder="บ้านเลขที่, ถนน, ตำบล...">
+                    </div>
+                    <button class="btn" onclick="submitCheckout()" style="background-color: var(--success);">บันทึกข้อมูลและปลดล็อกมิเตอร์</button>
+                </div>
+                <div id="form-status"></div>
+            </div>
+
+            <div id="content-history" class="page-content hidden">
+                <h2><i class="fa-solid fa-history"></i> ประวัติการเบิกจ่ายมิเตอร์</h2>
+                <div class="subtitle">แสดงประวัติการเบิกจ่ายและปลดล็อกตู้ล่าสุด</div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>วัน-เวลา</th>
+                                <th>ผู้เบิก</th>
+                                <th>มิเตอร์</th>
+                                <th>ผู้รับบริการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-data">
+                            <tr><td colspan="4" style="text-align:center; color:var(--text-sub);">เตรียมการเชื่อมต่อดึงข้อมูลประวัติ...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="content-stock" class="page-content hidden">
+                <h2><i class="fa-solid fa-warehouse"></i> ตรวจสอบคลังสินค้า (Stock)</h2>
+                <div class="subtitle">ข้อมูลสถานะจำนวนพัสดุมิเตอร์ไฟฟ้าคงคลังปัจจุบัน</div>
+                <div class="stock-grid">
+                    <div class="stock-card"><div class="stock-num">8</div><div>ทั้งหมด (ตัว)</div></div>
+                    <div class="stock-card"><div class="stock-num" style="color:var(--success);">8</div><div>พร้อมเบิก</div></div>
+                    <div class="stock-card"><div class="stock-num" style="color:var(--danger);">0</div><div>ถูกเบิกจ่าย</div></div>
+                </div>
+            </div>
+
+            <div id="content-control" class="page-content hidden">
+                <h2><i class="fa-solid fa-sliders"></i> แผงควบคุมระบบ (Control Panel)</h2>
+                <div class="subtitle">ระบบควบคุมคำสั่ง Relay บังคับเปิดตู้ผ่านบอร์ด ESP32 ด้วยตนเอง</div>
+                <p style="text-align:center; color:var(--text-sub); font-size:14px;">(ฟังก์ชันแอดมินสำหรับสั่งเปิดตู้โดยไม่ลงบันทึกในกรณีฉุกเฉิน)</p>
+                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-top:20px;">
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 1')">เปิดตู้ที่ 1</button>
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 2')">เปิดตู้ที่ 2</button>
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 3')">เปิดตู้ที่ 3</button>
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 4')">เปิดตู้ที่ 4</button>
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 5')">เปิดตู้ที่ 5</button>
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 6')">เปิดตู้ที่ 6</button>
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 7')">เปิดตู้ที่ 7</button>
+                    <button class="btn" style="background:#5c6b73;" onclick="alert('สั่งเปิด Relay 8')">เปิดตู้ที่ 8</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwQ1XpiO3K4Knv1_LHXKooSfwAEA_Lk2EOrk_j1YRrCbUjp7-m0wJOuyFi0ZwEddWLVPQ/exec"; 
+        
+        let currentEmpId = "";
+        let selectedMeterId = null;
+
+        function login() {
+            const empId = document.getElementById("emp-id").value;
+            if(!empId) { alert("กรุณากรอกรหัสพนักงาน"); return; }
+            
+            document.getElementById("status").innerText = "กำลังตรวจสอบสิทธิ์...";
+            
+            fetch(`${GAS_URL}?action=login&empId=${empId}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    currentEmpId = empId;
+                    document.getElementById("user-display").innerText = data.name;
+                    document.getElementById("login-page").classList.add("hidden");
+                    
+                    document.getElementById("main-nav").classList.remove("hidden");
+                    document.getElementById("main-page").classList.remove("hidden");
+                    
+                    switchPage('checkout');
+                } else {
+                    document.getElementById("status").style.color = "#e74c3c";
+                    document.getElementById("status").innerText = "❌ ไม่พบรหัสพนักงานนี้ในระบบ";
+                }
+            })
+            .catch(err => {
+                document.getElementById("status").style.color = "#e74c3c";
+                document.getElementById("status").innerText = "เกิดข้อผิดพลาดในการเชื่อมต่อ";
+                console.error(err);
+            });
+        }
+
+        function switchPage(pageName) {
+            const pages = document.querySelectorAll('.page-content');
+            pages.forEach(page => page.classList.add('hidden'));
+            
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(link => link.classList.remove('active'));
+            
+            document.getElementById(`content-${pageName}`).classList.remove('hidden');
+            document.getElementById(`menu-${pageName}`).classList.add('active');
+        }
+
+        function selectMeter(meterId) {
+            selectedMeterId = meterId;
+            for (let i = 1; i <= 8; i++) {
+                document.getElementById(`meter-${i}`).classList.remove("selected");
+            }
+            document.getElementById(`meter-${meterId}`).classList.add("selected");
+            document.getElementById("selected-meter-text").innerText = `(มิเตอร์ตัวที่ ${meterId})`;
+            document.getElementById("form-section").classList.remove("hidden");
+            document.getElementById("form-section").scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function submitCheckout() {
+            const userNum = document.getElementById("user-num").value;
+            const userName = document.getElementById("user-name").value;
+            const address = document.getElementById("address").value;
+            const statusDiv = document.getElementById("form-status");
+
+            if(!userNum || !userName || !address) {
+                alert("กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง");
+                return;
+            }
+
+            statusDiv.style.color = "#4a90e2";
+            statusDiv.innerText = "กำลังบันทึกและส่งคำสั่งปลดล็อกมิเตอร์...";
+
+            fetch(`${GAS_URL}?action=checkout&empId=${currentEmpId}&meterId=${selectedMeterId}&userNum=${encodeURIComponent(userNum)}&userName=${encodeURIComponent(userName)}&address=${encodeURIComponent(address)}`)
+            .then(res => res.text())
+            .then(data => {
+                if(data === "Success_Unlocked") {
+                    statusDiv.style.color = "#2ecc71";
+                    statusDiv.innerText = `🔓 สั่งปลดล็อกมิเตอร์ตัวที่ ${selectedMeterId} และบันทึกข้อมูลเรียบร้อย!`;
+                    
+                    setTimeout(() => {
+                        document.getElementById(`meter-${selectedMeterId}`).classList.remove("selected");
+                        document.getElementById("form-section").classList.add("hidden");
+                        document.getElementById("user-num").value = "";
+                        document.getElementById("user-name").value = "";
+                        document.getElementById("address").value = "";
+                        statusDiv.innerText = "";
+                        selectedMeterId = null;
+                    }, 4000);
+                } else {
+                    statusDiv.style.color = "#e74c3c";
+                    statusDiv.innerText = "เกิดข้อผิดพลาดในการบันทึกข้อมูล";
+                }
+            })
+            .catch(err => {
+                statusDiv.style.color = "#e74c3c";
+                statusDiv.innerText = "เกิดข้อผิดพลาดการเชื่อมต่อฐานข้อมูล";
+                console.error(err);
+            });
+        }
+    </script>
+</body>
+</html>

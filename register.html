@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงทะเบียนพนักงาน - ระบบจัดการมิเตอร์</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="login-container" style="max-width: 500px; margin: 60px auto;">
+        <h2>📝 ลงทะเบียนพนักงานใหม่</h2>
+        <p>กรุณากรอกข้อมูลพนักงานให้ครบถ้วนเพื่อส่งคำขออนุมัติ</p>
+        
+        <form onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label for="reg-username">รหัสพนักงาน:</label>
+                <input type="text" id="reg-username" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required placeholder="เช่น EMP001">
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="reg-fullname">ชื่อ-นามสกุล พนักงาน:</label>
+                <input type="text" id="reg-fullname" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required placeholder="นายสมชาย สายไฟ">
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="reg-department">แผนก / ฝ่าย:</label>
+                <select id="reg-department" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px;">
+                    <option value="แผนกปฏิบัติการและบํารุงรักษา">แผนกปฏิบัติการและบํารุงรักษา</option>
+                    <option value="แผนกมิเตอร์และหม้อแปลง">แผนกมิเตอร์และหม้อแปลง</option>
+                    <option value="ผู้รับจ้างงดจ่ายไฟ">ผู้รับจ้างงดจ่ายไฟ</option>
+                    <option value="ผู้ดูแลระบบ (Admin)">ผู้ดูแลระบบ (Admin)</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="reg-role">กำหนดสิทธิ์การใช้งานระบบ:</label>
+                <select id="reg-role" onchange="toggleAdminPasscode(this.value)" style="width: 100%; padding: 10px; border: 2px solid #007bff; border-radius: 4px; font-size: 15px; font-weight: bold;">
+                    <option value="user">User ทั่วไป (ดูหน้าหลัก & ประวัติ เท่านั้น)</option>
+                    <option value="admin">Admin (เข้าถึงได้ทุกหน้า + จัดการคลัง)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="admin-passcode-group" style="margin-top: 15px; display: none;">
+                <label for="admin-passcode" style="color: #dc3545; font-weight: bold;">🔑 รหัสความปลอดภัยสำหรับการเป็น Admin:</label>
+                <input type="password" id="admin-passcode" placeholder="กรอกรหัสลับผู้ดูแลระบบ" style="width: 100%; padding: 10px; border: 2px solid #dc3545; border-radius: 4px;">
+            </div>
+
+            <button type="submit" class="btn-submit" style="margin-top: 25px;">💾 ส่งข้อมูลลงทะเบียน</button>
+        </form>
+
+        <p style="margin-top: 25px; text-align: center; font-size: 14px;">
+            <a href="login.html" style="color: #007bff; text-decoration: none; font-weight: bold;">⬅️ กลับไปหน้าเข้าสู่ระบบ</a>
+        </p>
+    </div>
+
+    <script>
+        const SECRET_ADMIN_CODE = "1234";
+
+        function toggleAdminPasscode(role) {
+            const group = document.getElementById('admin-passcode-group');
+            if (group) {
+                if (role === 'admin') {
+                    group.style.display = 'block';
+                } else {
+                    group.style.display = 'none';
+                    document.getElementById('admin-passcode').value = '';
+                }
+            }
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('reg-username').value.trim();
+            const fullname = document.getElementById('reg-fullname').value.trim();
+            const department = document.getElementById('reg-department').value;
+            const role = document.getElementById('reg-role').value;
+
+            // 1. ดึงข้อมูลพนักงานที่มีอยู่ทั้งหมดออกมาตรวจสอบก่อน
+            let userList = JSON.parse(localStorage.getItem('registeredUsers')) || {};
+
+            // 🔥 ส่วนที่เพิ่ม: เงื่อนไขตรวจจับรหัสพนักงานซ้ำแบบเด็ดขาด
+            if (userList[username]) {
+                alert(`⚠️ ปฏิเสธการลงทะเบียน: รหัสพนักงาน "${username}" นี้ถูกใช้งานไปแล้ว!\nกรุณาใช้รหัสอื่น หรือติดต่อ Admin เพื่อตรวจสอบครับ`);
+                document.getElementById('reg-username').focus(); // สั่งไฮไลท์ไปที่ช่องรหัสพนักงานเพื่อให้พิมพ์แก้ใหม่
+                return; // สั่งหยุดทำงานทันที ไม่ให้บันทึกข้อมูลทับลงระบบ
+            }
+
+            // 2. ถ้าตรวจแล้วไม่ซ้ำ ดำเนินการตรวจสอบสิทธิ์ Admin ต่อตามปกติ
+            if (role === 'admin') {
+                const enteredCode = document.getElementById('admin-passcode').value;
+                if (enteredCode !== SECRET_ADMIN_CODE) {
+                    alert('❌ รหัสความปลอดภัยสำหรับการเป็น Admin ไม่ถูกต้อง!');
+                    return;
+                }
+            }
+
+            // 3. ทำการบันทึกข้อมูลใหม่ลง Object
+            userList[username] = {
+                role: role,
+                fullname: fullname,
+                department: department,
+                status: (role === 'admin') ? 'approved' : 'pending' 
+            };
+
+            // 4. เขียนทับลงฐานข้อมูลกลางของบราวเซอร์
+            localStorage.setItem('registeredUsers', JSON.stringify(userList));
+            
+            if(role === 'user') {
+                alert(`ลงทะเบียน คุณ${fullname} สำเร็จ! ⏳ กรุณารอให้ Admin ตรวจสอบและกดอนุมัติระบบก่อนจึงจะล็อกอินได้ครับ`);
+            } else {
+                alert(`ลงทะเบียนสิทธิ์ Admin สำเร็จ! สามารถนำรหัสไปล็อกอินเข้าใช้งานได้ทันที`);
+            }
+            
+            // ลงทะเบียนเสร็จ ดีดกลับหน้าเข้าสู่ระบบเพื่อความปลอดภัย
+            window.location.href = 'login.html';
+        }
+    </script>
+
+</body>
+</html>

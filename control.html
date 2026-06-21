@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ควบคุมเอง - ระบบจัดการมิเตอร์</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">🎛️ Meter System</div>
+    <div class="menu">
+        <a href="index.html">หน้าหลัก</a>
+        <a href="stock.html" id="menu-stock">Stock</a>
+        <a href="control.html" class="active" id="menu-control">ควบคุมเอง</a>
+        <a href="history.html">ประวัติ</a>
+        <a href="admin-panel.html" id="menu-admin">จัดการผู้ใช้</a>
+        <a href="login.html">ออกจากระบบ</a>
+    </div>
+</nav>
+
+<main class="main-content">
+    <h1>⚙️ แผงควบคุมรีเลย์ด้วยตนเอง (Manual Control)</h1>
+    <p>จัดการเปิด-ปิดสวิตช์รีเลย์ ESP32 ทั้ง 8 ตัวได้อย่างอิสระ (ระบบจะซิงค์สถานะไปยังหน้าหลัก)</p>
+
+    <div class="relay-grid" id="controlGrid"></div>
+</main>
+
+<script>
+    function checkAdminPermission() {
+        const role = localStorage.getItem('userRole');
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser || role !== 'admin') {
+            alert('❌ คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+            window.location.href = 'index.html';
+        }
+    }
+    checkAdminPermission();
+
+    const controlGrid = document.getElementById('controlGrid');
+
+    function renderControlGrid() {
+        controlGrid.innerHTML = '';
+        for (let i = 1; i <= 8; i++) {
+            let meterName = localStorage.getItem('meterName-' + i) || 'Relay ' + i;
+            let currentStatus = localStorage.getItem('relayStatus-' + i) || 'off';
+
+            const card = document.createElement('div');
+            card.className = 'relay-card';
+            card.id = `control-card-${i}`;
+            
+            if (currentStatus === 'on') {
+                card.style.backgroundColor = "#e8f5e9";
+                card.style.borderColor = "#2e7d32";
+            } else {
+                card.style.backgroundColor = "white";
+                card.style.borderColor = "#e2e8f0";
+            }
+            
+            card.innerHTML = `
+                <h3>${meterName}</h3>
+                <span class="status-badge ${currentStatus}">
+                    ${currentStatus === 'on' ? 'เปิดใช้งาน' : 'ปิดอยู่'}
+                </span>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn-on" onclick="setRelay(${i}, 'on')" style="flex: 1; padding: 6px; cursor: pointer;">เปิด</button>
+                    <button class="btn-off" onclick="setRelay(${i}, 'off')" style="flex: 1; padding: 6px; cursor: pointer;">ปิด</button>
+                </div>
+            `;
+            controlGrid.appendChild(card);
+        }
+    }
+
+    function setRelay(id, status) {
+        localStorage.setItem('relayStatus-' + id, status);
+        renderControlGrid(); // สั่งวาดอัปเดตสีและการ์ดทันทีกดสวิตช์
+    }
+
+    window.onload = function() {
+        renderControlGrid();
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>หน้าหลัก - ระบบจัดการมิเตอร์</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .modal-backdrop {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-cancel { background: #e2e8f0; color: #334155; }
+        .btn-confirm { background: #10b981; color: white; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">🎛️ Meter System</div>
+    <div class="menu">
+        <a href="index.html" id="menu-home" class="active">หน้าหลัก</a>
+        <a href="stock.html" id="menu-stock">Stock</a>
+        <a href="control.html" id="menu-control">ควบคุมเอง</a>
+        <a href="history.html" id="menu-history">ประวัติ</a>
+        <a href="admin-panel.html" id="menu-admin">จัดการผู้ใช้</a> 
+        <a href="login.html">ออกจากระบบ</a>
+    </div>
+</nav>
+
+<main class="main-content">
+    <h1>ยินดีต้อนรับสู่ระบบจัดการมิเตอร์</h1>
+    <p>คลิกเลือกปุ่มเพื่อกรอกข้อมูลผู้ขอติดมิเตอร์ และเปิดรีเลย์</p>
+
+    <div class="relay-grid" id="mainGrid"></div>
+</main>
+
+<div id="infoModal" class="modal-backdrop">
+    <div class="modal-box">
+        <h2 id="modalTitle">📋 กรอกข้อมูลโครงข่าย</h2>
+        <form id="relayForm" onsubmit="submitRelayData(event)">
+            <div class="form-group">
+                <label>หมายเลขผู้ใช้ไฟฟ้า:</label>
+                <input type="text" id="meterId" required placeholder="เช่น 020001234567" style="width:100%; padding:8px; margin-top:5px;">
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+                <label>ชื่อผู้ใช้ไฟฟ้า:</label>
+                <input type="text" id="customerName" required placeholder="ชื่อ-นามสกุล" style="width:100%; padding:8px; margin-top:5px;">
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+                <label>ที่อยู่:</label>
+                <textarea id="address" required placeholder="บ้านเลขที่..." rows="2" style="width:100%; padding:8px; margin-top:5px; font-family:inherit;"></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+                <button type="submit" class="btn-confirm">บันทึก & เปิดรีเลย์ ⚡</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentActiveId = null;
+
+    // 🔒 ล็อกสิทธิ์และซ่อนเมนู ป้องกันโค้ดรวน
+    function checkAuthAndHideMenus() {
+        const role = localStorage.getItem('userRole');       
+        const currentUser = localStorage.getItem('currentUser'); 
+
+        if (!role || !currentUser) {
+            alert('🔒 ความปลอดภัย: กรุณาเข้าสู่ระบบก่อนใช้งานครับ');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (role !== 'admin') {
+            const stockMenu = document.getElementById('menu-stock');
+            const controlMenu = document.getElementById('menu-control');
+            const adminMenu = document.getElementById('menu-admin');
+            
+            if (stockMenu) stockMenu.style.display = 'none';
+            if (controlMenu) controlMenu.style.display = 'none';
+            if (adminMenu) adminMenu.style.display = 'none';
+        }
+    }
+    
+    checkAuthAndHideMenus();
+
+    // 🌟 สร้างกล่องและดึงข้อมูลมาแสดง (เปิดได้อย่างเดียว บล็อกการกดปิดจากหน้าหลัก)
+    function renderMainGrid() {
+        const mainGrid = document.getElementById('mainGrid');
+        if (!mainGrid) return; 
+        
+        mainGrid.innerHTML = '';
+
+        for (let i = 1; i <= 8; i++) {
+            let meterName = localStorage.getItem('meterName-' + i) || 'Relay ' + i;
+            let meterUnit = localStorage.getItem('meterUnit-' + i) || '0';
+            let currentStatus = localStorage.getItem('relayStatus-' + i) || 'off';
+
+            const card = document.createElement('div');
+            card.className = 'relay-card';
+            card.id = `relay-card-${i}`;
+            
+            if (currentStatus === 'on') card.style.backgroundColor = '#e8f5e9';
+
+            let buttonText = 'กดเพื่อเปิด';
+            let buttonBgColor = '#007bff';
+            let buttonCursor = 'pointer';
+
+            if (currentStatus === 'on') {
+                buttonText = 'กำลังจ่ายไฟ ⚡';
+                buttonBgColor = '#10b981'; 
+                buttonCursor = 'not-allowed'; 
+            }
+
+            card.innerHTML = `
+                <h3>${meterName}</h3>
+                <p class="meter-unit">หน่วย: ${meterUnit} kWh</p>
+                <span class="status-badge ${currentStatus}" id="status-${i}">
+                    ${currentStatus === 'on' ? 'เปิดใช้งาน' : 'ปิดอยู่'}
+                </span>
+                <button class="btn-activate" onclick="handleButtonClick(${i})" style="width: 100%; margin-top: 10px; padding: 8px; border-radius: 4px; cursor: ${buttonCursor}; background-color: ${buttonBgColor}; color: white; border: none; font-weight: bold;">
+                    ${buttonText}
+                </button>
+            `;
+            mainGrid.appendChild(card);
+        }
+    }
+
+    // ⚡ บล็อกการกดปิดจากหน้าหลัก
+    function handleButtonClick(id) {
+        let currentStatus = localStorage.getItem('relayStatus-' + id) || 'off';
+        
+        if (currentStatus === 'on') {
+            alert('⚠️ ปฏิเสธการทำงาน: ไม่สามารถสั่งปิดรีเลย์จากหน้าหลักได้! (กรุณาแจ้งผู้ดูแลระบบให้ปิดผ่านหน้า "ควบคุมเอง" เท่านั้น)');
+            return; 
+        } else {
+            openModal(id);
+        }
+    }
+
+    function openModal(id) {
+        currentActiveId = id;
+        let meterName = localStorage.getItem('meterName-' + id) || 'Relay ' + id;
+        document.getElementById('modalTitle').innerText = '📋 กรอกข้อมูลสำหรับติดตั้ง: ' + meterName;
+        document.getElementById('infoModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('infoModal').style.display = 'none';
+        document.getElementById('relayForm').reset();
+        currentActiveId = null;
+    }
+
+    // 🔥 ส่วนที่แก้ไข: ปรับปรุงระบบบันทึกประวัติให้เข้ากองกลาง
+    function submitRelayData(event) {
+    event.preventDefault();
+    if (!currentActiveId) return;
+
+    // ดึงข้อมูลชื่อมิเตอร์และหน่วยปัจจุบันจากหน้าจอหลัก
+    const meterName = localStorage.getItem('meterName-' + currentActiveId) || 'Relay ' + currentActiveId;
+    const meterUnit = localStorage.getItem('meterUnit-' + currentActiveId) || '0'; // 🔥 ดึงหน่วย kWh ปัจจุบัน
+    
+    // ดึงข้อมูลผู้ใช้งานที่ล็อกอินอยู่ในระบบ
+    const currentUser = localStorage.getItem('currentUser') || 'Unknown';
+    const userRole = localStorage.getItem('userRole') || 'User';
+
+    const logData = {
+        relayId: currentActiveId,
+        relayName: meterName,
+        meterUnit: meterUnit, // 🔥 เพิ่ม: เก็บหน่วยของมิเตอร์ขณะกดเบิก
+        meterId: document.getElementById('meterId').value,
+        customerName: document.getElementById('customerName').value,
+        address: document.getElementById('address').value,
+        operator: currentUser, // 🔥 เพิ่ม: แยกชื่อผู้เบิกเดี่ยวๆ
+        operatorRole: userRole, // เก็บสิทธิ์ใช้งาน
+        timestamp: new Date().toLocaleString('th-TH'),
+        action: 'เปิดใช้งาน (เบิกติดตั้ง)'
+    };
+
+    // บันทึกลงกองกลาง (localStorage) คีย์ 'relayLogs'
+    const currentLogs = JSON.parse(localStorage.getItem('relayLogs')) || [];
+    currentLogs.push(logData);
+    localStorage.setItem('relayLogs', JSON.stringify(currentLogs));
+
+    // อัปเดตสถานะของรีเลย์เป็น On
+    localStorage.setItem('relayStatus-' + currentActiveId, 'on');
+
+    alert('⚡ บันทึกข้อมูลและเปิดสัญญาณรีเลย์สำเร็จ! ประวัติถูกส่งไปยังเมนูประวัติแล้ว');
+    closeModal();
+    renderMainGrid();
+}
+
+    window.onload = function() {
+        renderMainGrid();
+    };
+</script>
+</body>
+</html>

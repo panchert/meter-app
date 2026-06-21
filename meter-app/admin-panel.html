@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการผู้ใช้ - ระบบจัดการมิเตอร์</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- แถบเมนูสำหรับ Admin -->
+    <nav class="navbar">
+        <div class="logo">🎛️ Meter System</div>
+        <div class="menu">
+            <a href="index.html">หน้าหลัก</a>
+            <a href="stock.html">Stock</a>
+            <a href="control.html">ควบคุมเอง</a>
+            <a href="history.html">ประวัติ</a>
+            <a href="admin-panel.html" class="active" id="menu-admin">จัดการผู้ใช้</a>
+            <a href="login.html">ออกจากระบบ</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <h1>👥 ระบบจัดการพนักงานและอนุมัติสิทธิ์</h1>
+        <p>ตรวจสอบรายชื่อผู้ลงทะเบียนเข้าใช้งานระบบ และกดอนุมัติหรือยกเลิกสิทธิ์การใช้งาน</p>
+
+        <!-- ตารางแสดงรายชื่อพนักงานทั้งหมด -->
+        <div style="max-width: 1000px; margin: 30px auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: #1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">📋 ตารางรายชื่อพนักงานในระบบ</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 15px;">
+                    <thead>
+                        <tr style="background-color: #f8fafc; border-bottom: 2px solid #cbd5e1;">
+                            <th style="padding: 12px;">รหัสพนักงาน</th>
+                            <th style="padding: 12px;">ชื่อ-นามสกุล</th>
+                            <th style="padding: 12px;">แผนก / ฝ่าย</th>
+                            <th style="padding: 12px;">ระดับสิทธิ์</th>
+                            <th style="padding: 12px;">สถานะการเข้าใช้งาน</th>
+                            <th style="padding: 12px; text-align: center;">จัดการคำขอ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <!-- ข้อมูลพนักงานจะถูกดึงมาโรยตรงนี้ด้วย JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 🔒 ล็อกความปลอดภัย: ตรวจบัตรผู้บริหารก่อนให้เห็นหน้านี้
+        function checkAdminPermission() {
+            const role = localStorage.getItem('userRole');
+            const currentUser = localStorage.getItem('currentUser');
+            if (!currentUser || role !== 'admin') {
+                alert('❌ ปฏิเสธการเข้าถึง: หน้านี้สำหรับ Admin ที่ได้รับอนุมัติเท่านั้น');
+                window.location.href = 'index.html';
+            }
+        }
+        checkAdminPermission();
+
+        // ฟังก์ชันดึงรายชื่อมาแสดงผลบนตาราง
+        function renderUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = ''; // เคลียร์ตารางเก่าก่อนโหลดใหม่
+            
+            // ดึงฐานข้อมูลพนักงานจากความจำเบราว์เซอร์
+            let userList = JSON.parse(localStorage.getItem('registeredUsers')) || {};
+
+            for (let username in userList) {
+                // ซ่อนบัญชี admin หลักที่เป็นระบบหลังบ้านไว้ ไม่ต้องเอามาโชว์เพื่อความปลอดภัย
+                if (username === 'admin') continue;
+
+                const user = userList[username];
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #e2e8f0";
+
+                let statusBadge = '';
+                let actionButtons = '';
+
+                // เช็กสถานะเพื่อพ่นสีป้ายและปุ่มควบคุมตามสถานะปัจจุบัน
+                if (user.status === 'approved') {
+                    statusBadge = `<span style="background-color:#d1fae5; color:#065f46; padding:4px 10px; border-radius:12px; font-size:13px; font-weight:500;">✔️ อนุมัติแล้ว</span>`;
+                    actionButtons = `<button onclick="updateStatus('${username}', 'pending')" style="background-color:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px;">❌ ยกเลิกสิทธิ์</button>`;
+                } else {
+                    statusBadge = `<span style="background-color:#fef3c7; color:#92400e; padding:4px 10px; border-radius:12px; font-size:13px; font-weight:500;">⏳ รอนุมัติ</span>`;
+                    actionButtons = `<button onclick="updateStatus('${username}', 'approved')" style="background-color:#10b981; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:13px;">✔️ อนุมัติ</button>`;
+                }
+
+                tr.innerHTML = `
+                    <td style="padding: 12px; font-weight: bold; color:#0f172a;">${username}</td>
+                    <td style="padding: 12px; color:#334155;">${user.fullname}</td>
+                    <td style="padding: 12px; color:#334155;">${user.department}</td>
+                    <td style="padding: 12px; color:#334155;">${user.role === 'admin' ? '⭐ Admin' : 'พนักงานทั่วไป'}</td>
+                    <td style="padding: 12px;">${statusBadge}</td>
+                    <td style="padding: 12px; text-align: center; display:flex; gap:5px; justify-content:center;">
+                        ${actionButtons}
+                        <button onclick="deleteUser('${username}')" style="background-color:#64748b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px;">ลบรายชื่อ</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // ฟังก์ชันอัปเดตสถานะ อนุมัติ / ยกเลิก
+        function updateStatus(username, newStatus) {
+            let userList = JSON.parse(localStorage.getItem('registeredUsers')) || {};
+            if (userList[username]) {
+                userList[username].status = newStatus;
+                localStorage.setItem('registeredUsers', JSON.stringify(userList));
+                renderUserTable(); // รีเฟรชตารางให้เห็นการเปลี่ยนแปลงทันที
+            }
+        }
+
+        // ฟังก์ชันลบพนักงานออกจากฐานข้อมูลเลย
+        function deleteUser(username) {
+            if (confirm(`คุณแน่ใจใช่หรือไม่ว่าต้องการลบพนักงานรหัส ${username} ออกจากระบบ?`)) {
+                let userList = JSON.parse(localStorage.getItem('registeredUsers')) || {};
+                delete userList[username];
+                localStorage.setItem('registeredUsers', JSON.stringify(userList));
+                renderUserTable();
+            }
+        }
+
+        // สั่งรันตารางเมื่อเปิดหน้าเว็บสำเร็จ
+        window.onload = renderUserTable;
+    </script>
+
+</body>
+</html>

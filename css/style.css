@@ -240,3 +240,40 @@ textarea {
     margin: 5px 0 10px 0;
     font-weight: 500;
 }
+/* สำหรับหน้าจอมือถือ (กว้างไม่เกิน 768px) */
+@media screen and (max-width: 768px) {
+    /* ซ่อนหัวตารางปกติ */
+    .history-table thead { display: none; }
+    
+    /* ปรับตารางให้เป็นบล็อก */
+    .history-table, .history-table tbody, .history-table tr, .history-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    /* ปรับแต่งการ์ดแต่ละแถว */
+    .history-table tr {
+        margin-bottom: 15px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px;
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* ให้ชื่อหัวข้อโผล่มาข้างหน้าข้อมูลเพื่อให้ดูง่าย */
+    .history-table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+        border: none;
+    }
+    
+    .history-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        font-weight: bold;
+        color: #64748b;
+    }
+}

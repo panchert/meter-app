@@ -277,3 +277,31 @@ textarea {
         color: #64748b;
     }
 }
+/* --- ปรับแต่งเมนูให้เรียงแถวเดียวในมือถือ (ไม่ให้เลื่อนลงมาตัดบรรทัด) --- */
+@media screen and (max-width: 768px) {
+    .navbar {
+        flex-direction: column; /* ให้โลโก้อยู่บน เมนูอยู่ล่าง */
+        padding: 10px;
+    }
+
+    .navbar .menu {
+        display: flex;
+        overflow-x: auto;       /* ถ้าเมนูยาว ให้ปัดซ้าย-ขวาได้ */
+        white-space: nowrap;    /* บังคับไม่ให้ขึ้นบรรทัดใหม่ */
+        width: 100%;            /* ให้เต็มความกว้าง */
+        padding: 5px 0;
+        margin-top: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .navbar .menu::-webkit-scrollbar {
+        display: none;          /* ซ่อนแถบเลื่อนให้ดูสะอาดตา */
+    }
+
+    .navbar .menu a {
+        margin-left: 0;
+        padding: 8px 12px;
+        font-size: 13px;        /* ลดขนาดตัวอักษรเล็กน้อยเพื่อประหยัดพื้นที่ */
+        flex-shrink: 0;         /* ป้องกันปุ่มโดนบีบ */
+    }
+}
